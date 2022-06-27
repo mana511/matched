@@ -1,0 +1,897 @@
+import tkinter as tk
+import pandas as pd
+from tkinter import ttk
+from tkinter import messagebox
+import pandas as pd
+import numpy as np
+import random,sys
+
+#------------------------------DIFINE(変数の定義)--------------------------------------
+global match_num,match_df,match_reset
+match_num=0
+match_reset=0
+
+#対戦済みdfのカラム名
+cols=[ "member0","member1","member2","member3","member4","member5","member6","member7","member8","member9","member10",
+     "member11","member12","member13","member14","member15","member16","member17","member18","member19","member20",
+     "member21","member22","member23","member24","member25","member26","member27","member28","member29","member30",
+     "member31","member32","member33","member34","member35","member36","member37","member38","member39","member40",
+     "member41","member42","member43","member44","member45","member46","member47","member48","member49"]
+#対戦済みdfの行名
+rows=[ "member0","member1","member2","member3","member4","member5","member6","member7","member8","member9","member10",
+     "member11","member12","member13","member14","member15","member16","member17","member18","member19","member20",
+     "member21","member22","member23","member24","member25","member26","member27","member28","member29","member30",
+     "member31","member32","member33","member34","member35","member36","member37","member38","member39","member40",
+     "member41","member42","member43","member44","member45","member46","member47","member48","member49"]
+    #対戦済みdfを作成
+if match_num ==0:
+    match_df = pd.DataFrame(index=rows, columns=cols)
+
+
+
+
+
+#一行分のデータをdfに格納
+def update_df(i,df,member_name,rest_flag,hope_match):
+    #member_name
+    df.iloc[i,0]=member_name
+    #rest_flag
+    df.iloc[i,1]=rest_flag
+    #hope_match
+    df.iloc[i,2]=hope_match          
+    return df
+
+def make_num_name_list(i,df):
+    #休憩フラッグがFalse(休み希望なし) && 、名前が記載されていたら => 試合リストに追加
+    #休憩する人(True)　or 名前な -> はリストに追加しない
+    if df.iloc[i,1] == False and df.iloc[i,0] != "":
+        name_list.append(df.iloc[i,0])
+        num_list.append(i)
+    return 0
+
+#指定要素数をリストに格納
+def resume_make_list(df):
+    for i in range(50):
+        make_num_name_list(i,df)
+    return df
+
+
+#対戦票が一致しているかチェック
+def value_check(df,all_member):
+    for i in range(all_member):
+        if df.iloc[i,2] != "":
+            A_value=int(df.iloc[i,2].split('番')[0])
+            if A_value == i:
+                print("対戦希望の設定に誤りがあります。"+str(A_value)+"番同士が対戦希望設定となっております。ご確認ください。")
+                messagebox.showwarning("エラー","対戦希望の設定に誤りがあります。"+str(A_value)+"番同士が対戦希望設定となっております。ご確認ください。" )
+                sys.exit()
+            #
+            if df.iloc[A_value,2] != "":
+                B_value=int(df.iloc[A_value,2].split('番')[0])
+
+                if i == B_value:
+                    check="ok"
+                else:
+                    print("対戦希望の設定に誤りがあります。ご確認ください。")
+                    messagebox.showwarning("エラー","対戦希望の設定に誤りがあります。ご確認ください。")
+                    sys.exit()
+            else:
+                print("対戦希望の設定に誤りがあります。ご確認ください。")
+                messagebox.showwarning("エラー","対戦希望の設定に誤りがあります。ご確認ください。")
+                sys.exit()
+    return 0
+
+
+#休憩フラグFalse && 名前がある人
+def count_allmember(df):
+    count=0
+    for i  in range(len(df)):
+        #名前がある人　かつ　休憩フラグがFalseの人
+        if df.iloc[i,0] !="" and df.iloc[i,1]==False:
+            count+=1
+    return count
+
+
+
+
+#対戦dfに記録を追加
+def check_matched(df,num1,num2): 
+    df.iloc[num1,num2]=True
+    return df
+
+#対戦希望となったメンバーをリストから除外
+def del_hope_match_member(df,df2,df3,i):
+    global num_list,name_list,matched_matrix_row
+    #対戦希望がある場合(2列目:hope_march)
+    if df.iloc[i,2] != "":
+        try:
+            #対戦済みのメンバーをリストから削除
+            num=i
+            num2=int(df.iloc[i,2].split('番')[0])
+            get_index_and_del_element(num)
+            get_index_and_del_element(num2)
+            
+            #対戦記録をdf2に格納
+            df2=check_matched(df2,num,num2)
+            df2=check_matched(df2,num2,num)
+            
+            #対戦票に記入(A列)
+            df3.iloc[matched_matrix_row,0]=df.iloc[num,0]
+            #対戦票に記入(B列)
+            df3.iloc[matched_matrix_row,1]=df.iloc[num2,0]
+            matched_matrix_row+=1
+        except:
+            print("削除済み")
+
+    return df,df2,df3
+
+
+
+#num2がnumと対戦した記録がないか確認する
+def check_match_log(num,num2,match_df,df,main_df):
+    global num_list,name_list,matched_matrix_row
+    
+    #対戦済みだとTrue
+    if match_df.iloc[num,num2] == True:
+        matched=True
+        
+    #未対戦だとFalse
+    else:
+        matched=False
+        #対戦票に記入(A列)
+        main_df.iloc[matched_matrix_row,0]=df.iloc[num,0]
+        #対戦票に記入(B列)
+        main_df.iloc[matched_matrix_row,1]=df.iloc[num2,0]
+        matched_matrix_row+=1
+        #num2をリストから削除
+        get_index_and_del_element(num2)
+    return matched,main_df
+
+#全ての行の対戦希望がある人をリストから除外
+def del_all_list(all_num,df,df2,df3):
+    for i in range(all_num):
+        df,df2,df3=del_hope_match_member(df,df2,df3,i)
+    return df,df2,df3
+
+def check_log(num,num2,match_df,df,main_df):
+    global num_list,name_list,matched_matrix_row
+    for g in range(len(num_list)):
+        #num,num2が未対戦の場合
+        match,main_df=check_match_log(num,num2,match_df,df,main_df)
+        if match==False:
+            aa=""
+            return main_df
+        else:
+            aa=""
+    num2=random.choice(num_list)       
+    #対戦票に記入(A列)
+    main_df.iloc[matched_matrix_row,0]=df.iloc[num,0]
+    #対戦票に記入(B列)
+    main_df.iloc[matched_matrix_row,1]=df.iloc[num2,0]
+    matched_matrix_row+=1
+    #num2をリストから削除
+    get_index_and_del_element(num2)
+    return main_df
+
+#抽出した人のindexを取得し、リストから削除
+def get_index_and_del_element(num):
+    global num_list,name_list
+    index=num_list.index(num)
+    del name_list[index]
+    del num_list[index]
+    return 0
+
+def complte_match_data(remain_member,main_df,match_df,df):
+    global num_list,name_list
+    for u in range(remain_member):
+        #一人抽出
+        num=random.choice(num_list)
+        #抽出した人のindexを取得し、リストから削除
+        get_index_and_del_element(num)
+        #残ったnum_listから人を抽出
+        num2=random.choice(num_list)
+        #num2がnumと対戦した記録がないか確認する
+        main_df=check_log(num,num2,match_df,df,main_df)
+    return main_df
+
+#----------ボタン押入力確認----------
+def Button1_checker(event):
+
+    #メンバー名リスト、メンバーNoリストをglobal変数化
+    global num_list,name_list,matched_matrix_row,match_num,match_df,match_reset
+    #対戦票に入力する対象の行のNo
+    matched_matrix_row=0
+    num_list=[]
+    name_list=[]
+
+    #対戦済みdfのカラム名
+    cols=[ "member0","member1","member2","member3","member4","member5","member6","member7","member8","member9","member10",
+     "member11","member12","member13","member14","member15","member16","member17","member18","member19","member20",
+     "member21","member22","member23","member24","member25","member26","member27","member28","member29","member30",
+     "member31","member32","member33","member34","member35","member36","member37","member38","member39","member40",
+     "member41","member42","member43","member44","member45","member46","member47","member48","member49"]    
+    #対戦済みdfの行名
+    rows=[ "member0","member1","member2","member3","member4","member5","member6","member7","member8","member9","member10",
+     "member11","member12","member13","member14","member15","member16","member17","member18","member19","member20",
+     "member21","member22","member23","member24","member25","member26","member27","member28","member29","member30",
+     "member31","member32","member33","member34","member35","member36","member37","member38","member39","member40",
+     "member41","member42","member43","member44","member45","member46","member47","member48","member49"]
+
+
+    #testモードを用意
+    test_mode=False
+
+    #ユーザデータ用dfを作成
+    match_col=["member_name","rest_flag","hope_match"]
+    #ユーザデータ用dfを作成
+    df=pd.DataFrame(np.arange(150).reshape(50, 3), columns=match_col)
+    try:
+        if test_mode ==True:
+            EditBox1.insert(tk.END,"test1")
+            EditBox2.insert(tk.END,"test2")
+            EditBox3.insert(tk.END,"test3")
+            EditBox4.insert(tk.END,"test4")
+            EditBox5.insert(tk.END,"test5")
+           
+        df=update_df(0,df,EditBox1.get(),bln1.get(),v1.get())
+        df=update_df(1,df,EditBox2.get(),bln2.get(),v2.get())
+        df=update_df(2,df,EditBox3.get(),bln3.get(),v3.get())
+        df=update_df(3,df,EditBox4.get(),bln4.get(),v4.get())
+        df=update_df(4,df,EditBox5.get(),bln5.get(),v5.get())
+        df=update_df(5,df,EditBox6.get(),bln6.get(),v6.get())
+        df=update_df(6,df,EditBox7.get(),bln7.get(),v7.get())
+        df=update_df(7,df,EditBox8.get(),bln8.get(),v8.get())
+        df=update_df(8,df,EditBox9.get(),bln9.get(),v9.get())
+        df=update_df(9,df,EditBox10.get(),bln10.get(),v10.get())
+        df=update_df(10,df,EditBox11.get(),bln11.get(),v11.get())
+
+        
+        df=update_df(11,df,EditBox12.get(),bln12.get(),v12.get())
+        df=update_df(12,df,EditBox13.get(),bln13.get(),v13.get())
+        df=update_df(13,df,EditBox14.get(),bln14.get(),v14.get())
+        df=update_df(14,df,EditBox15.get(),bln15.get(),v15.get())
+        df=update_df(15,df,EditBox16.get(),bln16.get(),v16.get())
+        df=update_df(16,df,EditBox17.get(),bln17.get(),v17.get())
+        df=update_df(17,df,EditBox18.get(),bln18.get(),v18.get())
+        df=update_df(18,df,EditBox19.get(),bln19.get(),v19.get())
+        df=update_df(19,df,EditBox20.get(),bln20.get(),v20.get())
+        df=update_df(20,df,EditBox21.get(),bln21.get(),v21.get())
+
+        df=update_df(21,df,EditBox22.get(),bln22.get(),v22.get())
+        df=update_df(22,df,EditBox23.get(),bln23.get(),v23.get())
+        df=update_df(23,df,EditBox24.get(),bln24.get(),v24.get())
+        df=update_df(24,df,EditBox25.get(),bln25.get(),v25.get())
+        df=update_df(25,df,EditBox26.get(),bln26.get(),v26.get())
+        df=update_df(26,df,EditBox27.get(),bln27.get(),v27.get())
+        df=update_df(27,df,EditBox28.get(),bln28.get(),v28.get())
+        df=update_df(28,df,EditBox29.get(),bln29.get(),v29.get())
+        df=update_df(29,df,EditBox30.get(),bln30.get(),v30.get())
+        df=update_df(30,df,EditBox31.get(),bln31.get(),v31.get())
+        #----------ここから続き------------
+        df=update_df(31,df,EditBox32.get(),bln32.get(),v32.get())
+        df=update_df(32,df,EditBox33.get(),bln33.get(),v33.get())
+        df=update_df(33,df,EditBox34.get(),bln34.get(),v34.get())
+        df=update_df(34,df,EditBox35.get(),bln35.get(),v35.get())
+        df=update_df(35,df,EditBox36.get(),bln36.get(),v36.get())
+        df=update_df(36,df,EditBox37.get(),bln37.get(),v37.get())
+        df=update_df(37,df,EditBox38.get(),bln38.get(),v38.get())
+        df=update_df(38,df,EditBox39.get(),bln39.get(),v39.get())
+        df=update_df(39,df,EditBox40.get(),bln40.get(),v40.get())
+        df=update_df(40,df,EditBox41.get(),bln41.get(),v41.get())
+
+        df=update_df(41,df,EditBox42.get(),bln42.get(),v42.get())
+        df=update_df(42,df,EditBox43.get(),bln43.get(),v43.get())
+        df=update_df(43,df,EditBox44.get(),bln44.get(),v44.get())
+        df=update_df(44,df,EditBox45.get(),bln45.get(),v45.get())
+        df=update_df(45,df,EditBox46.get(),bln46.get(),v46.get())
+        df=update_df(46,df,EditBox47.get(),bln47.get(),v47.get())
+        df=update_df(47,df,EditBox48.get(),bln48.get(),v48.get())
+        df=update_df(48,df,EditBox49.get(),bln49.get(),v49.get())
+        df=update_df(49,df,EditBox50.get(),bln50.get(),v50.get())
+        if test_mode ==True:
+            #df.to_excel('対戦票_test.xlsx')
+            print("testモード")
+
+        #num_list, name_listを作成
+        df=resume_make_list(df)
+
+        #メンバー数を取得
+        all_member=count_allmember(df)
+
+        
+        #対戦表を作成
+        main_col=["対戦A","対戦B"]
+        main_df=pd.DataFrame(np.arange((all_member//2)*2).reshape(all_member//2, 2), columns=main_col)
+        #対戦希望がメンバーＡ/メンバーＢともに入力されているかチェック
+        res=value_check(df,50)
+        #---上記で問題があれば、エラーを表示して処理中止---
+        #print(num_list,name_list,all_member//2)
+
+        #対戦希望がある人をname_list,num_listから除外
+        df,match_df,main_df=del_all_list(all_member,df,match_df,main_df)
+
+        
+        remain_member=len(num_list)//2
+        #print(num_list,name_list)
+
+        #---対戦表に追記 
+        main_df=complte_match_data(remain_member,main_df,match_df,df)
+
+        #print(main_df.head())
+        main_df.to_excel('対戦票'+str(match_num)+'.xlsx', index=False)
+        match_num=match_num+1  
+        match_reset=match_reset+1  
+        #print(str(match_num)+"試合目の対戦票を保存します。")
+        messagebox.showinfo("対戦作成完了",str(match_num)+"試合目の対戦票を保存します。")
+        if match_reset > all_member-2: 
+            pd.DataFrame(index=rows, columns=cols)
+            #print("試合数が"+str(all_member-1)+"試合を超えたので、対戦済みの相手の記録をリセットします。")
+            messagebox.showwarning("対戦履歴のリセット","試合数が"+str(all_member-1)+"試合を超えたので、対戦済みの相手の記録をリセットします。")
+            match_reset=1
+            
+        
+            
+        
+    except:
+        print("Noerr")
+
+
+
+
+
+
+
+
+#----------GUI----------
+#----ウィンドウ----
+root = tk.Tk()
+root.title(u"Software Title")
+root.geometry("1300x900")
+
+#----ラベル(左側)----
+Static_left_list=[]
+for h in range(25):
+    Static_left_list.append(tk.Label(text=str(h)+'番目'))
+    Static_left_list[h].place(x=60,y=25+33*h)
+
+#----ラベル(右側)----
+Static_right_list=[]
+for h in range(25):
+    Static_right_list.append(tk.Label(text=str(h+25)+'番目'))
+    Static_right_list[h].place(x=600,y=25+33*h)
+
+Static_a = tk.Label(text=u'選手名')
+Static_a.place(x=200,y=3)
+Static_b = tk.Label(text=u'対戦希望')
+Static_b.place(x=400,y=3)
+Static_c = tk.Label(text=u'休み希望')
+Static_c.place(x=500,y=3)
+
+Static_left_a = tk.Label(text=u'選手名')
+Static_left_a.place(x=750,y=3)
+Static_left_b = tk.Label(text=u'対戦希望')
+Static_left_b.place(x=950,y=3)
+Static_left_c = tk.Label(text=u'休み希望')
+Static_left_c.place(x=1050,y=3)
+
+#----テキストボックス----
+x_textbox=120
+y_textbox=26
+beta=33
+EditBox1 = tk.Entry(width=40)  
+EditBox1.place(x=x_textbox,y=y_textbox)
+EditBox2 = tk.Entry(width=40)  
+EditBox2.place(x=x_textbox,y=y_textbox+beta*1)
+EditBox3 = tk.Entry(width=40)  
+EditBox3.place(x=x_textbox,y=y_textbox+beta*2)
+EditBox4 = tk.Entry(width=40)  
+EditBox4.place(x=x_textbox,y=y_textbox+beta*3)
+EditBox5 = tk.Entry(width=40)  
+EditBox5.place(x=x_textbox,y=y_textbox+beta*4)
+EditBox6 = tk.Entry(width=40)  
+EditBox6.place(x=x_textbox,y=y_textbox+beta*5)
+EditBox7 = tk.Entry(width=40)  
+EditBox7.place(x=x_textbox,y=y_textbox+beta*6)
+EditBox8 = tk.Entry(width=40)  
+EditBox8.place(x=x_textbox,y=y_textbox+beta*7)
+EditBox9 = tk.Entry(width=40)  
+EditBox9.place(x=x_textbox,y=y_textbox+beta*8)
+EditBox10 = tk.Entry(width=40)  
+EditBox10.place(x=x_textbox,y=y_textbox+beta*9)
+
+EditBox11 = tk.Entry(width=40)  
+EditBox11.place(x=x_textbox,y=y_textbox+beta*10)
+EditBox12 = tk.Entry(width=40)  
+EditBox12.place(x=x_textbox,y=y_textbox+beta*11)
+EditBox13 = tk.Entry(width=40)  
+EditBox13.place(x=x_textbox,y=y_textbox+beta*12)
+EditBox14 = tk.Entry(width=40)  
+EditBox14.place(x=x_textbox,y=y_textbox+beta*13)
+EditBox15 = tk.Entry(width=40)  
+EditBox15.place(x=x_textbox,y=y_textbox+beta*14)
+
+EditBox16 = tk.Entry(width=40)  
+EditBox16.place(x=x_textbox,y=y_textbox+beta*15)
+EditBox17 = tk.Entry(width=40)  
+EditBox17.place(x=x_textbox,y=y_textbox+beta*16)
+EditBox18 = tk.Entry(width=40)  
+EditBox18.place(x=x_textbox,y=y_textbox+beta*17)
+EditBox19 = tk.Entry(width=40)  
+EditBox19.place(x=x_textbox,y=y_textbox+beta*18)
+EditBox20 = tk.Entry(width=40)  
+EditBox20.place(x=x_textbox,y=y_textbox+beta*19)
+EditBox21 = tk.Entry(width=40)  
+EditBox21.place(x=x_textbox,y=y_textbox+beta*20)
+EditBox22 = tk.Entry(width=40)  
+EditBox22.place(x=x_textbox,y=y_textbox+beta*21)
+EditBox23 = tk.Entry(width=40)  
+EditBox23.place(x=x_textbox,y=y_textbox+beta*22)
+EditBox24 = tk.Entry(width=40)  
+EditBox24.place(x=x_textbox,y=y_textbox+beta*23)
+EditBox25 = tk.Entry(width=40)  
+EditBox25.place(x=x_textbox,y=y_textbox+beta*24)
+
+
+#----テキストボックス(右側)----
+x_textbox=650
+y_textbox=26
+EditBox26 = tk.Entry(width=40)  
+EditBox26.place(x=x_textbox,y=y_textbox)
+EditBox27 = tk.Entry(width=40)  
+EditBox27.place(x=x_textbox,y=y_textbox+beta*1)
+EditBox28 = tk.Entry(width=40)  
+EditBox28.place(x=x_textbox,y=y_textbox+beta*2)
+EditBox29 = tk.Entry(width=40)  
+EditBox29.place(x=x_textbox,y=y_textbox+beta*3)
+EditBox30 = tk.Entry(width=40)  
+EditBox30.place(x=x_textbox,y=y_textbox+beta*4)
+
+EditBox31 = tk.Entry(width=40)  
+EditBox31.place(x=x_textbox,y=y_textbox+beta*5)
+EditBox32 = tk.Entry(width=40)  
+EditBox32.place(x=x_textbox,y=y_textbox+beta*6)
+EditBox33 = tk.Entry(width=40)  
+EditBox33.place(x=x_textbox,y=y_textbox+beta*7)
+EditBox34 = tk.Entry(width=40)  
+EditBox34.place(x=x_textbox,y=y_textbox+beta*8)
+EditBox35 = tk.Entry(width=40)  
+EditBox35.place(x=x_textbox,y=y_textbox+beta*9)
+
+EditBox36 = tk.Entry(width=40)  
+EditBox36.place(x=x_textbox,y=y_textbox+beta*10)
+EditBox37 = tk.Entry(width=40)  
+EditBox37.place(x=x_textbox,y=y_textbox+beta*11)
+EditBox38 = tk.Entry(width=40)  
+EditBox38.place(x=x_textbox,y=y_textbox+beta*12)
+EditBox39 = tk.Entry(width=40)  
+EditBox39.place(x=x_textbox,y=y_textbox+beta*13)
+EditBox40 = tk.Entry(width=40)  
+EditBox40.place(x=x_textbox,y=y_textbox+beta*14)
+EditBox41 = tk.Entry(width=40)  
+EditBox41.place(x=x_textbox,y=y_textbox+beta*15)
+EditBox42 = tk.Entry(width=40)  
+EditBox42.place(x=x_textbox,y=y_textbox+beta*16)
+EditBox43 = tk.Entry(width=40)  
+EditBox43.place(x=x_textbox,y=y_textbox+beta*17)
+EditBox44 = tk.Entry(width=40)  
+EditBox44.place(x=x_textbox,y=y_textbox+beta*18)
+EditBox45 = tk.Entry(width=40)  
+EditBox45.place(x=x_textbox,y=y_textbox+beta*19)
+
+EditBox46 = tk.Entry(width=40)  
+EditBox46.place(x=x_textbox,y=y_textbox+beta*20)
+EditBox47 = tk.Entry(width=40)  
+EditBox47.place(x=x_textbox,y=y_textbox+beta*21)
+EditBox48 = tk.Entry(width=40)  
+EditBox48.place(x=x_textbox,y=y_textbox+beta*22)
+EditBox49 = tk.Entry(width=40)  
+EditBox49.place(x=x_textbox,y=y_textbox+beta*23)
+EditBox50 = tk.Entry(width=40)  
+EditBox50.place(x=x_textbox,y=y_textbox+beta*24)
+
+
+#ボタン
+gamma=33
+Button1 = tk.Button(text=u'対戦表作成ボタン')
+Button1.bind("<Button-1>",lambda event: Button1_checker(event)) 
+Button1.place(x=1170,y=800)
+
+
+
+#チェックボックス
+x_chk=510
+y_chk=24
+gamma=33
+
+global bln1,bln2
+bln1 = tk.BooleanVar()
+chk1 = tk.Checkbutton(root, variable=bln1)
+chk1.place(x=x_chk, y=y_chk)
+
+bln2 = tk.BooleanVar()
+chk2 = tk.Checkbutton(root, variable=bln2)
+chk2.place(x=x_chk, y=y_chk+gamma*1)
+
+bln3 = tk.BooleanVar()
+chk3 = tk.Checkbutton(root, variable=bln3)
+chk3.place(x=x_chk,y=y_chk+gamma*2)
+
+bln4 = tk.BooleanVar()
+chk4 = tk.Checkbutton(root, variable=bln4)
+chk4.place(x=x_chk,y=y_chk+gamma*3)
+
+bln5 = tk.BooleanVar()
+chk5 = tk.Checkbutton(root, variable=bln5)
+chk5.place(x=x_chk,y=y_chk+gamma*4)
+
+bln6 = tk.BooleanVar()
+chk6 = tk.Checkbutton(root, variable=bln6)
+chk6.place(x=x_chk,y=y_chk+gamma*5)
+
+bln7 = tk.BooleanVar()
+chk7 = tk.Checkbutton(root, variable=bln7)
+chk7.place(x=x_chk,y=y_chk+gamma*6)
+
+bln8 = tk.BooleanVar()
+chk8 = tk.Checkbutton(root, variable=bln8)
+chk8.place(x=x_chk,y=y_chk+gamma*7)
+
+bln9 = tk.BooleanVar()
+chk9 = tk.Checkbutton(root, variable=bln9)
+chk9.place(x=x_chk,y=y_chk+gamma*8)
+
+bln10 = tk.BooleanVar()
+chk10 = tk.Checkbutton(root, variable=bln10)
+chk10.place(x=x_chk,y=y_chk+gamma*9)
+
+bln11 = tk.BooleanVar()
+chk11 = tk.Checkbutton(root, variable=bln11)
+chk11.place(x=x_chk,y=y_chk+gamma*10)
+
+bln12 = tk.BooleanVar()
+chk12 = tk.Checkbutton(root, variable=bln12)
+chk12.place(x=x_chk,y=y_chk+gamma*11)
+
+bln13 = tk.BooleanVar()
+chk13 = tk.Checkbutton(root, variable=bln13)
+chk13.place(x=x_chk,y=y_chk+gamma*12)
+
+bln14 = tk.BooleanVar()
+chk14 = tk.Checkbutton(root, variable=bln14)
+chk14.place(x=x_chk,y=y_chk+gamma*13)
+
+bln15 = tk.BooleanVar()
+chk15 = tk.Checkbutton(root, variable=bln15)
+chk15.place(x=x_chk,y=y_chk+gamma*14)
+
+bln16 = tk.BooleanVar()
+chk16 = tk.Checkbutton(root, variable=bln16)
+chk16.place(x=x_chk,y=y_chk+gamma*15)
+
+bln17 = tk.BooleanVar()
+chk17 = tk.Checkbutton(root, variable=bln17)
+chk17.place(x=x_chk,y=y_chk+gamma*16)
+
+bln18 = tk.BooleanVar()
+chk18 = tk.Checkbutton(root, variable=bln18)
+chk18.place(x=x_chk,y=y_chk+gamma*17)
+
+bln19 = tk.BooleanVar()
+chk19 = tk.Checkbutton(root, variable=bln19)
+chk19.place(x=x_chk,y=y_chk+gamma*18)
+
+bln20 = tk.BooleanVar()
+chk20 = tk.Checkbutton(root, variable=bln20)
+chk20.place(x=x_chk,y=y_chk+gamma*19)
+
+bln21 = tk.BooleanVar()
+chk21 = tk.Checkbutton(root, variable=bln21)
+chk21.place(x=x_chk,y=y_chk+gamma*20)
+
+bln22 = tk.BooleanVar()
+chk22 = tk.Checkbutton(root, variable=bln22)
+chk22.place(x=x_chk,y=y_chk+gamma*21)
+
+bln23 = tk.BooleanVar()
+chk23 = tk.Checkbutton(root, variable=bln23)
+chk23.place(x=x_chk,y=y_chk+gamma*22)
+
+bln24 = tk.BooleanVar()
+chk24 = tk.Checkbutton(root, variable=bln24)
+chk24.place(x=x_chk,y=y_chk+gamma*23)
+
+bln25 = tk.BooleanVar()
+chk25 = tk.Checkbutton(root, variable=bln25)
+chk25.place(x=x_chk,y=y_chk+gamma*24)
+
+
+
+#----ラベル(右側)----
+x_chk=1060
+y_chk=24
+
+bln26 = tk.BooleanVar()
+chk26 = tk.Checkbutton(root, variable=bln26)
+chk26.place(x=x_chk,y=y_chk)
+
+bln27 = tk.BooleanVar()
+chk27 = tk.Checkbutton(root, variable=bln27)
+chk27.place(x=x_chk,y=y_chk+gamma*1)
+
+bln28 = tk.BooleanVar()
+chk28 = tk.Checkbutton(root, variable=bln28)
+chk28.place(x=x_chk,y=y_chk+gamma*2)
+
+bln29 = tk.BooleanVar()
+chk29 = tk.Checkbutton(root, variable=bln29)
+chk29.place(x=x_chk,y=y_chk+gamma*3)
+
+bln30 = tk.BooleanVar()
+chk30 = tk.Checkbutton(root, variable=bln30)
+chk30.place(x=x_chk,y=y_chk+gamma*4)
+
+bln31 = tk.BooleanVar()
+chk31 = tk.Checkbutton(root, variable=bln31)
+chk31.place(x=x_chk,y=y_chk+gamma*5)
+
+bln32 = tk.BooleanVar()
+chk32 = tk.Checkbutton(root, variable=bln32)
+chk32.place(x=x_chk,y=y_chk+gamma*6)
+
+bln33 = tk.BooleanVar()
+chk33 = tk.Checkbutton(root, variable=bln33)
+chk33.place(x=x_chk,y=y_chk+gamma*7)
+
+bln34 = tk.BooleanVar()
+chk34 = tk.Checkbutton(root, variable=bln34)
+chk34.place(x=x_chk,y=y_chk+gamma*8)
+
+bln35 = tk.BooleanVar()
+chk35 = tk.Checkbutton(root, variable=bln35)
+chk35.place(x=x_chk,y=y_chk+gamma*9)
+
+bln36 = tk.BooleanVar()
+chk36 = tk.Checkbutton(root, variable=bln36)
+chk36.place(x=x_chk,y=y_chk+gamma*10)
+
+bln37 = tk.BooleanVar()
+chk37 = tk.Checkbutton(root, variable=bln37)
+chk37.place(x=x_chk,y=y_chk+gamma*11)
+
+bln38 = tk.BooleanVar()
+chk38 = tk.Checkbutton(root, variable=bln38)
+chk38.place(x=x_chk,y=y_chk+gamma*12)
+
+bln39 = tk.BooleanVar()
+chk39 = tk.Checkbutton(root, variable=bln39)
+chk39.place(x=x_chk,y=y_chk+gamma*13)
+
+bln40 = tk.BooleanVar()
+chk40 = tk.Checkbutton(root, variable=bln40)
+chk40.place(x=x_chk,y=y_chk+gamma*14)
+
+bln41 = tk.BooleanVar()
+chk41 = tk.Checkbutton(root, variable=bln41)
+chk41.place(x=x_chk,y=y_chk+gamma*15)
+
+bln42 = tk.BooleanVar()
+chk42 = tk.Checkbutton(root, variable=bln42)
+chk42.place(x=x_chk,y=y_chk+gamma*16)
+
+bln43 = tk.BooleanVar()
+chk43 = tk.Checkbutton(root, variable=bln43)
+chk43.place(x=x_chk,y=y_chk+gamma*17)
+
+bln44 = tk.BooleanVar()
+chk44 = tk.Checkbutton(root, variable=bln44)
+chk44.place(x=x_chk,y=y_chk+gamma*18)
+
+bln45 = tk.BooleanVar()
+chk45 = tk.Checkbutton(root, variable=bln45)
+chk45.place(x=x_chk,y=y_chk+gamma*19)
+
+bln46 = tk.BooleanVar()
+chk46 = tk.Checkbutton(root, variable=bln46)
+chk46.place(x=x_chk,y=y_chk+gamma*20)
+
+bln47 = tk.BooleanVar()
+chk47 = tk.Checkbutton(root, variable=bln47)
+chk47.place(x=x_chk,y=y_chk+gamma*21)
+
+bln48 = tk.BooleanVar()
+chk48 = tk.Checkbutton(root, variable=bln48)
+chk48.place(x=x_chk,y=y_chk+gamma*22)
+
+bln49 = tk.BooleanVar()
+chk49 = tk.Checkbutton(root, variable=bln49)
+chk49.place(x=x_chk,y=y_chk+gamma*23)
+
+bln50 = tk.BooleanVar()
+chk50 = tk.Checkbutton(root, variable=bln50)
+chk50.place(x=x_chk,y=y_chk+gamma*24)
+
+
+module = ('0番目','1番目', '2番目', '3番目', '4番目','5番目', '6番目','7番目', '8番目','9番目', '10番目'
+          , '11番目', '12番目', '13番目', '14番目', '15番目', '16番目', '17番目', '18番目', '19番目', '20番目'
+          , '21番目', '22番目', '23番目', '24番目', '25番目', '26番目', '27番目', '28番目', '29番目', '30番目'
+          , '31番目', '32番目', '33番目', '34番目', '35番目', '36番目', '37番目', '38番目', '39番目', '40番目'
+          , '41番目', '42番目', '43番目', '44番目', '45番目', '46番目', '47番目', '48番目', '49番目')
+x_combo=390
+y_combo=25
+
+v1 = tk.StringVar()
+v2 = tk.StringVar()
+v3 = tk.StringVar()
+v4 = tk.StringVar()
+v5 = tk.StringVar()
+v6 = tk.StringVar()
+v7 = tk.StringVar()
+v8 = tk.StringVar()
+v9 = tk.StringVar()
+v10 = tk.StringVar()
+v11 = tk.StringVar()
+v12 = tk.StringVar()
+v13 = tk.StringVar()
+v14 = tk.StringVar()
+v15 = tk.StringVar()
+v16 = tk.StringVar()
+v17 = tk.StringVar()
+v18 = tk.StringVar()
+v19 = tk.StringVar()
+v20 = tk.StringVar()
+v21 = tk.StringVar()
+v22 = tk.StringVar()
+v23 = tk.StringVar()
+v24 = tk.StringVar()
+v25 = tk.StringVar()
+
+
+
+
+#----ラベル(右側)----
+x_=1060
+y_=24
+
+v26 = tk.StringVar()
+v27 = tk.StringVar()
+v28 = tk.StringVar()
+v29 = tk.StringVar()
+v30 = tk.StringVar()
+v31 = tk.StringVar()
+v32 = tk.StringVar()
+v33 = tk.StringVar()
+v34 = tk.StringVar()
+v35 = tk.StringVar()
+v36 = tk.StringVar()
+v37 = tk.StringVar()
+v38 = tk.StringVar()
+v39 = tk.StringVar()
+v40 = tk.StringVar()
+v41 = tk.StringVar()
+v42 = tk.StringVar()
+v43 = tk.StringVar()
+v44 = tk.StringVar()
+v45 = tk.StringVar()
+v46 = tk.StringVar()
+v47 = tk.StringVar()
+v48 = tk.StringVar()
+v49 = tk.StringVar()
+v50 = tk.StringVar()
+
+
+
+combobox1 = ttk.Combobox(root, textvariable= v1, values=module, style="office.TCombobox",width=10)
+combobox1.place(x=x_combo,y=y_combo+gamma*0)
+combobox2 = ttk.Combobox(root, textvariable= v2, values=module, style="office.TCombobox",width=10)
+combobox2.place(x=x_combo,y=y_combo+gamma*1)
+combobox3 = ttk.Combobox(root, textvariable= v3, values=module, style="office.TCombobox",width=10)
+combobox3.place(x=x_combo,y=y_combo+gamma*2)
+combobox4 = ttk.Combobox(root, textvariable= v4, values=module, style="office.TCombobox",width=10)
+combobox4.place(x=x_combo,y=y_combo+gamma*3)
+combobox5 = ttk.Combobox(root, textvariable= v5, values=module, style="office.TCombobox",width=10)
+combobox5.place(x=x_combo,y=y_combo+gamma*4)
+combobox6 = ttk.Combobox(root, textvariable= v6, values=module, style="office.TCombobox",width=10)
+combobox6.place(x=x_combo,y=y_combo+gamma*5)
+combobox7 = ttk.Combobox(root, textvariable= v7, values=module, style="office.TCombobox",width=10)
+combobox7.place(x=x_combo,y=y_combo+gamma*6)
+combobox8 = ttk.Combobox(root, textvariable= v8, values=module, style="office.TCombobox",width=10)
+combobox8.place(x=x_combo,y=y_combo+gamma*7)
+combobox9 = ttk.Combobox(root, textvariable= v9, values=module, style="office.TCombobox",width=10)
+combobox9.place(x=x_combo,y=y_combo+gamma*8)
+combobox10 = ttk.Combobox(root, textvariable= v10, values=module, style="office.TCombobox",width=10)
+combobox10.place(x=x_combo,y=y_combo+gamma*9)
+
+combobox11 = ttk.Combobox(root, textvariable= v11, values=module, style="office.TCombobox",width=10)
+combobox11.place(x=x_combo,y=y_combo+gamma*10)
+combobox12 = ttk.Combobox(root, textvariable= v12, values=module, style="office.TCombobox",width=10)
+combobox12.place(x=x_combo,y=y_combo+gamma*11)
+combobox13 = ttk.Combobox(root, textvariable= v13, values=module, style="office.TCombobox",width=10)
+combobox13.place(x=x_combo,y=y_combo+gamma*12)
+combobox14 = ttk.Combobox(root, textvariable= v14, values=module, style="office.TCombobox",width=10)
+combobox14.place(x=x_combo,y=y_combo+gamma*13)
+combobox15 = ttk.Combobox(root, textvariable= v15, values=module, style="office.TCombobox",width=10)
+combobox15.place(x=x_combo,y=y_combo+gamma*14)
+
+combobox16 = ttk.Combobox(root, textvariable= v16, values=module, style="office.TCombobox",width=10)
+combobox16.place(x=x_combo,y=y_combo+gamma*15)
+combobox17 = ttk.Combobox(root, textvariable= v17, values=module, style="office.TCombobox",width=10)
+combobox17.place(x=x_combo,y=y_combo+gamma*16)
+combobox18 = ttk.Combobox(root, textvariable= v18, values=module, style="office.TCombobox",width=10)
+combobox18.place(x=x_combo,y=y_combo+gamma*17)
+combobox19 = ttk.Combobox(root, textvariable= v19, values=module, style="office.TCombobox",width=10)
+combobox19.place(x=x_combo,y=y_combo+gamma*18)
+combobox20 = ttk.Combobox(root, textvariable= v20, values=module, style="office.TCombobox",width=10)
+combobox20.place(x=x_combo,y=y_combo+gamma*19)
+combobox21 = ttk.Combobox(root, textvariable= v21, values=module, style="office.TCombobox",width=10)
+combobox21.place(x=x_combo,y=y_combo+gamma*20)
+combobox22 = ttk.Combobox(root, textvariable= v22, values=module, style="office.TCombobox",width=10)
+combobox22.place(x=x_combo,y=y_combo+gamma*21)
+combobox23 = ttk.Combobox(root, textvariable= v23, values=module, style="office.TCombobox",width=10)
+combobox23.place(x=x_combo,y=y_combo+gamma*22)
+combobox24 = ttk.Combobox(root, textvariable= v24, values=module, style="office.TCombobox",width=10)
+combobox24.place(x=x_combo,y=y_combo+gamma*23)
+combobox25 = ttk.Combobox(root, textvariable= v25, values=module, style="office.TCombobox",width=10)
+combobox25.place(x=x_combo,y=y_combo+gamma*24)
+
+
+#----テキストボックス(右側)----
+x_textbox=940
+y_textbox=25
+combobox26 = ttk.Combobox(root, textvariable= v26, values=module, style="office.TCombobox",width=10)
+combobox26.place(x=x_textbox,y=y_textbox)
+combobox27 = ttk.Combobox(root, textvariable= v27, values=module, style="office.TCombobox",width=10)
+combobox27.place(x=x_textbox,y=y_textbox+gamma*1)
+combobox28 = ttk.Combobox(root, textvariable= v28, values=module, style="office.TCombobox",width=10)
+combobox28.place(x=x_textbox,y=y_textbox+gamma*2)
+combobox29 = ttk.Combobox(root, textvariable= v29, values=module, style="office.TCombobox",width=10)
+combobox29.place(x=x_textbox,y=y_textbox+gamma*3)
+combobox30 = ttk.Combobox(root, textvariable= v30, values=module, style="office.TCombobox",width=10)
+combobox30.place(x=x_textbox,y=y_textbox+gamma*4)
+
+combobox31 = ttk.Combobox(root, textvariable= v31, values=module, style="office.TCombobox",width=10)
+combobox31.place(x=x_textbox,y=y_textbox+gamma*5)
+combobox32 = ttk.Combobox(root, textvariable= v32, values=module, style="office.TCombobox",width=10)
+combobox32.place(x=x_textbox,y=y_textbox+gamma*6)
+combobox33 = ttk.Combobox(root, textvariable= v33, values=module, style="office.TCombobox",width=10)
+combobox33.place(x=x_textbox,y=y_textbox+gamma*7)
+combobox34 = ttk.Combobox(root, textvariable= v34, values=module, style="office.TCombobox",width=10)
+combobox34.place(x=x_textbox,y=y_textbox+gamma*8)
+combobox35 = ttk.Combobox(root, textvariable= v35, values=module, style="office.TCombobox",width=10)
+combobox35.place(x=x_textbox,y=y_textbox+gamma*9)
+
+combobox36 = ttk.Combobox(root, textvariable= v36, values=module, style="office.TCombobox",width=10)
+combobox36.place(x=x_textbox,y=y_textbox+gamma*10)
+combobox37 = ttk.Combobox(root, textvariable= v37, values=module, style="office.TCombobox",width=10)
+combobox37.place(x=x_textbox,y=y_textbox+gamma*11)
+combobox38 = ttk.Combobox(root, textvariable= v38, values=module, style="office.TCombobox",width=10)
+combobox38.place(x=x_textbox,y=y_textbox+gamma*12)
+combobox39 = ttk.Combobox(root, textvariable= v39, values=module, style="office.TCombobox",width=10)
+combobox39.place(x=x_textbox,y=y_textbox+gamma*13)
+combobox40 = ttk.Combobox(root, textvariable= v40, values=module, style="office.TCombobox",width=10)
+combobox40.place(x=x_textbox,y=y_textbox+gamma*14)
+combobox41 = ttk.Combobox(root, textvariable= v41, values=module, style="office.TCombobox",width=10)
+combobox41.place(x=x_textbox,y=y_textbox+gamma*15)
+combobox42 = ttk.Combobox(root, textvariable= v42, values=module, style="office.TCombobox",width=10)
+combobox42.place(x=x_textbox,y=y_textbox+gamma*16)
+combobox43 = ttk.Combobox(root, textvariable= v43, values=module, style="office.TCombobox",width=10)
+combobox43.place(x=x_textbox,y=y_textbox+gamma*17)
+combobox44 = ttk.Combobox(root, textvariable= v44, values=module, style="office.TCombobox",width=10)
+combobox44.place(x=x_textbox,y=y_textbox+gamma*18)
+combobox45 = ttk.Combobox(root, textvariable= v45, values=module, style="office.TCombobox",width=10)
+combobox45.place(x=x_textbox,y=y_textbox+gamma*19)
+
+combobox46 = ttk.Combobox(root, textvariable= v46, values=module, style="office.TCombobox",width=10)
+combobox46.place(x=x_textbox,y=y_textbox+gamma*20)
+combobox47 = ttk.Combobox(root, textvariable= v47, values=module, style="office.TCombobox",width=10)
+combobox47.place(x=x_textbox,y=y_textbox+gamma*21)
+combobox48 = ttk.Combobox(root, textvariable= v48, values=module, style="office.TCombobox",width=10)
+combobox48.place(x=x_textbox,y=y_textbox+gamma*22)
+combobox49 = ttk.Combobox(root, textvariable= v49, values=module, style="office.TCombobox",width=10)
+combobox49.place(x=x_textbox,y=y_textbox+gamma*23)
+combobox50 = ttk.Combobox(root, textvariable= v50, values=module, style="office.TCombobox",width=10)
+combobox50.place(x=x_textbox,y=y_textbox+gamma*24)
+
+
+
+
+root.mainloop()
